@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { buildSearchQuery } from '../src/builder.js';
-import { eq, exists, gt, lte, prefix } from '../src/comparators.js';
+import { eq, exists, gt, gte, lte, prefix } from '../src/comparators.js';
 import { and, or } from '../src/connectives.js';
 import { not } from '../src/modifiers.js';
 
@@ -107,5 +107,47 @@ describe('buildSearchQuery', () => {
     expect(buildSearchQuery(gt('created_at', '2020-10-21T23:39:20.123Z'))).toBe(
       'created_at:>"2020-10-21T23:39:20.123Z"',
     );
+  });
+
+  test('undefined value handling', () => {
+    expect(buildSearchQuery(undefined)).toBe('');
+
+    expect(buildSearchQuery(and(eq('first_name', 'Bob'), undefined))).toBe(
+      'first_name:Bob',
+    );
+    expect(buildSearchQuery(and(undefined, eq('first_name', 'Bob')))).toBe(
+      'first_name:Bob',
+    );
+    expect(buildSearchQuery(and(undefined, undefined))).toBe('');
+
+    expect(buildSearchQuery(or(eq('first_name', 'Bob'), undefined))).toBe(
+      'first_name:Bob',
+    );
+    expect(buildSearchQuery(or(undefined, eq('first_name', 'Bob')))).toBe(
+      'first_name:Bob',
+    );
+    expect(buildSearchQuery(or(undefined, undefined))).toBe('');
+
+    expect(not(undefined)).toBeUndefined();
+    expect(buildSearchQuery(not(undefined))).toBe('');
+
+    expect(
+      buildSearchQuery(
+        and(
+          eq('status', 'active'),
+          or(eq('type', 'premium'), undefined),
+          undefined,
+        ),
+      ),
+    ).toBe('status:active AND type:premium');
+
+    expect(
+      buildSearchQuery(
+        or(
+          [eq('title', 'Product A'), undefined],
+          and([gt('price', '100'), undefined, lte('price', '500')]),
+        ),
+      ),
+    ).toBe('(title:"Product A") OR (price:>100 AND price:<=500)');
   });
 });

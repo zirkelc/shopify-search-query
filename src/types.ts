@@ -12,6 +12,6 @@ export type Term = {
 };
 
 export type Query = {
-  terms: Array<Array<Term | Query> | Term | Query>;
+  terms: Array<Array<Term | Query | undefined> | Term | Query | undefined>;
   connective: Connective;
 };

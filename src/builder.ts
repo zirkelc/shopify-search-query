@@ -64,27 +64,43 @@ function formatTerm(term: Term): string {
  * buildSearchQuery(eq('first_name', 'Bob')) // first_name:Bob
  * buildSearchQuery(and(eq('first_name', 'Bob'), eq('orders_count', '16'))) // first_name:Bob AND orders_count:16
  * buildSearchQuery(or(eq('first_name', 'Bob'), eq('orders_count', '16'))) // first_name:Bob OR orders_count:16
+ * buildSearchQuery(undefined) // ""
  */
-export function buildSearchQuery(query: Query | Term): string {
+export function buildSearchQuery(query: Query | Term | undefined): string {
+  if (query === undefined) {
+    return '';
+  }
+
   if ('field' in query) {
     return formatTerm(query);
   }
 
   const buildTerms = (
-    terms: Array<Array<Term | Query> | Term | Query>,
+    terms: Array<Array<Term | Query | undefined> | Term | Query | undefined>,
     connective: string,
   ): string => {
-    return terms
+    const filteredTerms = terms
       .map((term) => {
+        if (term === undefined) {
+          return '';
+        }
         if (Array.isArray(term)) {
-          return `(${buildTerms(term, connective)})`;
+          const filteredArray = term.filter(
+            (t): t is Term | Query => t !== undefined,
+          );
+          if (filteredArray.length === 0) {
+            return '';
+          }
+          return `(${buildTerms(filteredArray, connective)})`;
         }
         if ('field' in term) {
           return formatTerm(term);
         }
         return buildSearchQuery(term);
       })
-      .join(` ${connective} `);
+      .filter((termString) => termString !== '');
+
+    return filteredTerms.join(` ${connective} `);
   };
 
   const { terms, connective } = query;
