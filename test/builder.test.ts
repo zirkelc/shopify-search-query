@@ -119,6 +119,13 @@ describe('buildSearchQuery', () => {
     expect(buildSearchQuery(eq('Größe:'))).toBe('Größe\\:');
   });
 
+  test('quotes inside a value without whitespace', () => {
+    expect(buildSearchQuery(eq('title', 'Board"Pro'))).toBe(
+      'title:Board\\"Pro',
+    );
+    expect(buildSearchQuery(eq('12"'))).toBe('12\\"');
+  });
+
   test('quotes inside a quoted value', () => {
     expect(buildSearchQuery(eq('title', 'Board "Pro" 150'))).toBe(
       'title:"Board \\"Pro\\" 150"',
@@ -131,9 +138,14 @@ describe('buildSearchQuery', () => {
   test('text query', () => {
     expect(buildSearchQuery(text('Bob'))).toBe('(Bob)');
     expect(buildSearchQuery(text(' Bob  Norman '))).toBe('(Bob AND Norman)');
+    // Free text, not syntax: no keywords, no quotes, and a leading minus is a character.
     expect(buildSearchQuery(text('Scarf -Blue OR Red'))).toBe(
-      '(Scarf AND \\-Blue AND "OR" AND Red)',
+      '(Scarf AND \\-Blue AND Red)',
     );
+    expect(buildSearchQuery(text('Board "Pro" AND NOT Light'))).toBe(
+      '(Board AND Pro AND Light)',
+    );
+    expect(text('OR "" AND')).toBeUndefined();
     expect(
       buildSearchQuery(and(text('Scarf Blue'), eq('product_ids', '1,2'))),
     ).toBe('(Scarf AND Blue) AND product_ids:1,2');

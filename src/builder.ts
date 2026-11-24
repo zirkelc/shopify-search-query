@@ -1,3 +1,4 @@
+import { KEYWORDS } from './keywords.js';
 import type { Query, Term } from './types.js';
 
 /**
@@ -26,15 +27,16 @@ function escapeName(value: string): string {
 }
 
 /**
- * The words that Shopify reads as connectives or modifiers. As a value, they are quoted, so they stay a word.
+ * Regex for the special characters of a value that is not quoted: the ones of names, and a double quote, which would
+ * open a phrase.
  */
-const KEYWORDS = new Set(['AND', 'OR', 'NOT']);
+const VALUE_ESCAPE_REGEX = /([:\\()"])/g;
 
 /**
  * Escapes special characters in values.
  * Values need all special characters escaped with backslash.
  * Dates in YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ format are quoted, and so are values with whitespace (a phrase) and
- * the keywords AND, OR and NOT. A quote or a backslash inside a quoted value is escaped.
+ * the keywords AND, OR and NOT (as a value, they stay a word). A quote or a backslash inside any value is escaped.
  * In the default search, a leading `-` is escaped too, because Shopify reads it as NOT.
  */
 function escapeValue(value: string, { field }: { field: string }): string {
@@ -47,7 +49,7 @@ function escapeValue(value: string, { field }: { field: string }): string {
     return `"${value.replace(/(["\\])/g, '\\$1')}"`;
   }
 
-  const escaped = value.replace(ESCAPE_REGEX, '\\$1');
+  const escaped = value.replace(VALUE_ESCAPE_REGEX, '\\$1');
   return field === '' && escaped.startsWith('-') ? `\\${escaped}` : escaped;
 }
 

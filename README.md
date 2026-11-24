@@ -150,10 +150,13 @@ buildSearchQuery(eq('Bob')); // Bob
 
 ### Text query
 
-`text` turns a free text of several words into a default search where every word must match. Each word is its own term, so Shopify matches it from its start (`Glove` finds `Gloves`), while a phrase in double quotes matches only whole words. A text without words gives `undefined`, so it can be combined like any optional term.
+`text` turns a free text of several words into a default search where every word must match. Each word is its own term, so Shopify matches it from its start (`Glove` finds `Gloves`), while a phrase in double quotes matches only whole words.
+
+The text is treated as free text, not as search syntax: double quotes are removed, the words `AND`, `OR` and `NOT` are left out, and a leading `-` is escaped, so a word never excludes anything. A text without words gives `undefined`, so it can be combined like any optional term.
 
 ```typescript
 buildSearchQuery(text('Bob Norman')); // (Bob AND Norman)
+buildSearchQuery(text('Board "Pro" OR -Light')); // (Board AND Pro AND \-Light)
 buildSearchQuery(and(text('Scarf Blue'), eq('product_ids', '1,2'))); // (Scarf AND Blue) AND product_ids:1,2
 ```
 
@@ -189,12 +192,13 @@ Special characters like `: \ ( )` in values will be escaped with a backslash.
 buildSearchQuery(eq('first_name', 'Bob:Norman')); // first_name:Bob\:Norman
 ```
 
-In the default search, a leading `-` is escaped too, because Shopify reads it as `NOT`. The keywords `AND`, `OR` and `NOT` as a value are surrounded by double quotes, so they stay a word. Double quotes and backslashes inside a quoted value are escaped.
+In the default search, a leading `-` is escaped too, because Shopify reads it as `NOT`. The keywords `AND`, `OR` and `NOT` as a value are surrounded by double quotes, so they stay a word. Double quotes and backslashes inside a value are escaped.
 
 ```typescript
 buildSearchQuery(eq('-Blue')); // \-Blue
 buildSearchQuery(eq('OR')); // "OR"
 buildSearchQuery(eq('title', 'Board "Pro" 150')); // title:"Board \"Pro\" 150"
+buildSearchQuery(eq('title', 'Board"Pro')); // title:Board\"Pro
 ```
 
 Date values will be surrounded by double quotes.
