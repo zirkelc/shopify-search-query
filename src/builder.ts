@@ -26,20 +26,29 @@ function escapeName(value: string): string {
 }
 
 /**
+ * The words that Shopify reads as connectives or modifiers. As a value, they are quoted, so they stay a word.
+ */
+const KEYWORDS = new Set(['AND', 'OR', 'NOT']);
+
+/**
  * Escapes special characters in values.
  * Values need all special characters escaped with backslash.
- * Dates in YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ format are quoted.
+ * Dates in YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ format are quoted, and so are values with whitespace (a phrase) and
+ * the keywords AND, OR and NOT. A quote or a backslash inside a quoted value is escaped.
+ * In the default search, a leading `-` is escaped too, because Shopify reads it as NOT.
  */
-function escapeValue(value: string): string {
+function escapeValue(value: string, { field }: { field: string }): string {
   // Check for date formats: YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ
   const isDate = DATE_REGEX.test(value);
   const hasWhitespace = value.includes(' ');
+  const isKeyword = KEYWORDS.has(value);
 
-  if (isDate || hasWhitespace) {
-    return `"${value}"`;
+  if (isDate || hasWhitespace || isKeyword) {
+    return `"${value.replace(/(["\\])/g, '\\$1')}"`;
   }
 
-  return value.replace(ESCAPE_REGEX, '\\$1');
+  const escaped = value.replace(ESCAPE_REGEX, '\\$1');
+  return field === '' && escaped.startsWith('-') ? `\\${escaped}` : escaped;
 }
 
 /**
@@ -49,8 +58,8 @@ function escapeValue(value: string): string {
  */
 function formatTerm(term: Term): string {
   const termString = term.field
-    ? `${escapeName(term.field)}${term.comparator}${escapeValue(term.value)}`
-    : escapeValue(term.value);
+    ? `${escapeName(term.field)}${term.comparator}${escapeValue(term.value, term)}`
+    : escapeValue(term.value, term);
 
   return term.modifier ? `${term.modifier} ${termString}` : termString;
 }

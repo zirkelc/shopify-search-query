@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { buildSearchQuery } from '../src/builder.js';
-import { eq, exists, gt, gte, lte, prefix } from '../src/comparators.js';
+import { eq, exists, gt, gte, lte, prefix, text } from '../src/comparators.js';
 import { and, or } from '../src/connectives.js';
 import { not } from '../src/modifiers.js';
 
@@ -106,6 +106,43 @@ describe('buildSearchQuery', () => {
     );
     expect(buildSearchQuery(gt('created_at', '2020-10-21T23:39:20.123Z'))).toBe(
       'created_at:>"2020-10-21T23:39:20.123Z"',
+    );
+  });
+
+  test('special characters in the default search', () => {
+    // A leading minus would exclude the word.
+    expect(buildSearchQuery(eq('-Blue'))).toBe('\\-Blue');
+    expect(buildSearchQuery(eq('title', '-Blue'))).toBe('title:-Blue');
+    // A keyword as a value stays a word.
+    expect(buildSearchQuery(eq('OR'))).toBe('"OR"');
+    expect(buildSearchQuery(and(eq('Bob'), eq('NOT')))).toBe('Bob AND "NOT"');
+    expect(buildSearchQuery(eq('Größe:'))).toBe('Größe\\:');
+  });
+
+  test('quotes inside a quoted value', () => {
+    expect(buildSearchQuery(eq('title', 'Board "Pro" 150'))).toBe(
+      'title:"Board \\"Pro\\" 150"',
+    );
+    expect(buildSearchQuery(eq('title', 'C:\\ Drive'))).toBe(
+      'title:"C:\\\\ Drive"',
+    );
+  });
+
+  test('text query', () => {
+    expect(buildSearchQuery(text('Bob'))).toBe('(Bob)');
+    expect(buildSearchQuery(text(' Bob  Norman '))).toBe('(Bob AND Norman)');
+    expect(buildSearchQuery(text('Scarf -Blue OR Red'))).toBe(
+      '(Scarf AND \\-Blue AND "OR" AND Red)',
+    );
+    expect(
+      buildSearchQuery(and(text('Scarf Blue'), eq('product_ids', '1,2'))),
+    ).toBe('(Scarf AND Blue) AND product_ids:1,2');
+    expect(
+      buildSearchQuery(or(text('Winter Sale'), eq('handle', 'winter-sale'))),
+    ).toBe('(Winter AND Sale) OR handle:winter-sale');
+    expect(text('  ')).toBeUndefined();
+    expect(buildSearchQuery(and(text(''), eq('status', 'active')))).toBe(
+      'status:active',
     );
   });
 

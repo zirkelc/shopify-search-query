@@ -148,6 +148,15 @@ The equality comparator (`eq`) can be used without a field to perform a default 
 buildSearchQuery(eq('Bob')); // Bob
 ```
 
+### Text query
+
+`text` turns a free text of several words into a default search where every word must match. Each word is its own term, so Shopify matches it from its start (`Glove` finds `Gloves`), while a phrase in double quotes matches only whole words. A text without words gives `undefined`, so it can be combined like any optional term.
+
+```typescript
+buildSearchQuery(text('Bob Norman')); // (Bob AND Norman)
+buildSearchQuery(and(text('Scarf Blue'), eq('product_ids', '1,2'))); // (Scarf AND Blue) AND product_ids:1,2
+```
+
 ### Grouping
 
 Square brackets are used to group multiple clauses to form subqueries. The terms inside the square brackets will be surrounded with parentheses.
@@ -178,6 +187,14 @@ Special characters like `: \ ( )` in values will be escaped with a backslash.
 
 ```typescript
 buildSearchQuery(eq('first_name', 'Bob:Norman')); // first_name:Bob\:Norman
+```
+
+In the default search, a leading `-` is escaped too, because Shopify reads it as `NOT`. The keywords `AND`, `OR` and `NOT` as a value are surrounded by double quotes, so they stay a word. Double quotes and backslashes inside a quoted value are escaped.
+
+```typescript
+buildSearchQuery(eq('-Blue')); // \-Blue
+buildSearchQuery(eq('OR')); // "OR"
+buildSearchQuery(eq('title', 'Board "Pro" 150')); // title:"Board \"Pro\" 150"
 ```
 
 Date values will be surrounded by double quotes.

@@ -1,4 +1,5 @@
-import type { Term } from './types.js';
+import { Connectives } from './connectives.js';
+import type { Query, Term } from './types.js';
 
 export type Comparator = (typeof Comparators)[keyof typeof Comparators];
 
@@ -29,6 +30,26 @@ export function eq(fieldOrValue: string, value?: string): Term {
 
   // field search
   return { field: fieldOrValue, value, comparator: Comparators.EQ };
+}
+
+/**
+ * Free text of one or more words in the default search, where every word must match. Each word is its own term, so
+ * Shopify matches it from its start and in any field; one term for the whole text would quote it as a phrase.
+ * Undefined when the text has no words, so it composes with `and` and `or` like an optional term.
+ *
+ * @example
+ * text('Bob')          // (Bob)
+ * text('Bob Norman')   // (Bob AND Norman)
+ * text('  ')           // undefined
+ */
+export function text(value: string): Query | undefined {
+  const words = value.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return undefined;
+
+  return {
+    terms: [words.map((word) => eq(word))],
+    connective: Connectives.AND,
+  };
 }
 
 /**
